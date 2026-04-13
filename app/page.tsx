@@ -30,6 +30,7 @@ type VoiceResponse = {
   audioBase64?: string
   durationMs?: number
   voiceId?: string
+  voiceName?: string
   modelId?: string
 }
 
@@ -299,8 +300,10 @@ export default function Page() {
                 </span>
                 {voiceResult.voiceId ? (
                   <span>
-                    <span className="font-medium">Voice ID:</span>{" "}
-                    {voiceResult.voiceId}
+                    <span className="font-medium">Voice:</span>{" "}
+                    {voiceResult.voiceName
+                      ? `${voiceResult.voiceName} (${voiceResult.voiceId})`
+                      : voiceResult.voiceId}
                   </span>
                 ) : null}
                 {voiceResult.modelId ? (

@@ -1,12 +1,13 @@
+import { getRandomElevenLabsVoice } from "@/lib/elevenlabs-voices"
+
 export const runtime = "nodejs"
 
-const DEFAULT_VOICE_ID =
-  process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM"
 const DEFAULT_MODEL_ID =
   process.env.ELEVENLABS_MODEL_ID || "eleven_multilingual_v2"
 
 export async function POST(request: Request) {
   const startedAt = Date.now()
+  const selectedVoice = getRandomElevenLabsVoice()
 
   try {
     const body = (await request.json()) as { text?: string }
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
     }
 
     const elevenResponse = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${DEFAULT_VOICE_ID}`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${selectedVoice.id}`,
       {
         method: "POST",
         headers: {
@@ -63,7 +64,8 @@ export async function POST(request: Request) {
           error: errorText || "ElevenLabs request failed.",
           status: elevenResponse.status,
           durationMs: Date.now() - startedAt,
-          voiceId: DEFAULT_VOICE_ID,
+          voiceId: selectedVoice.id,
+          voiceName: selectedVoice.name,
           modelId: DEFAULT_MODEL_ID,
         },
         { status: elevenResponse.status }
@@ -80,7 +82,8 @@ export async function POST(request: Request) {
       contentType: elevenResponse.headers.get("content-type") || "audio/mpeg",
       audioBase64,
       durationMs: Date.now() - startedAt,
-      voiceId: DEFAULT_VOICE_ID,
+      voiceId: selectedVoice.id,
+      voiceName: selectedVoice.name,
       modelId: DEFAULT_MODEL_ID,
     })
   } catch (error) {
