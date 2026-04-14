@@ -52,6 +52,12 @@ export const ELEVENLABS_VOICES: ElevenLabsVoice[] = [
 ]
 
 export function getRandomElevenLabsVoice() {
-  const randomIndex = Math.floor(Math.random() * ELEVENLABS_VOICES.length)
-  return ELEVENLABS_VOICES[randomIndex]
+  const availableVoices = ELEVENLABS_VOICES.filter(
+    (voice) => voice.category === "premade"
+  )
+  const voicePool =
+    availableVoices.length > 0 ? availableVoices : ELEVENLABS_VOICES
+  const randomIndex = Math.floor(Math.random() * voicePool.length)
+
+  return voicePool[randomIndex]
 }
