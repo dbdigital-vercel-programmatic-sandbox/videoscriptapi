@@ -169,7 +169,7 @@ export default function Page() {
       <section className="mx-auto flex w-full max-w-4xl flex-col gap-8">
         <header className="space-y-2 text-center sm:text-left">
           <h1 className="text-3xl font-semibold tracking-tight">
-            Video Script Generator
+            Video Generator
           </h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
             Turn a rough idea into a strong voice-over script with better
