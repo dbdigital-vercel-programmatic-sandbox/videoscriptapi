@@ -18,6 +18,7 @@ export interface TranscriptOptions {
   audio_url: string
   language_code?: string
   speaker_labels?: boolean
+  speech_model?: 'universal-3-pro' | 'universal-2'
 }
 
 export class AssemblyAIClient {
@@ -58,7 +59,9 @@ export class AssemblyAIClient {
 
   async createTranscript(options: TranscriptOptions): Promise<TranscriptResponse> {
     // Set Hindi as default language if not specified
+    // Add default speech model if not specified
     const transcriptOptions = {
+      speech_model: 'universal-3-pro', // Default to universal-3-pro
       ...options,
       language_code: options.language_code || 'hi' // Hindi as default
     }
