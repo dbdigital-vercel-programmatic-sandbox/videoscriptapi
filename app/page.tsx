@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   AudioLines,
   Captions,
+  Download,
   FileAudio,
   Sparkles,
   WandSparkles,
@@ -41,6 +42,17 @@ type VoiceResponse = {
   voiceId?: string
   voiceName?: string
   modelId?: string
+}
+
+type SubtitleResponse = {
+  ok: boolean
+  error?: string
+  status: number
+  subtitles?: string
+  format?: string
+  transcriptId?: string
+  transcriptText?: string
+  durationMs?: number
 }
 
 type View = "home" | "script" | "enhance" | "subtitle" | "speech"
@@ -472,6 +484,77 @@ function VideoQualityEnhancePage() {
 }
 
 function VideoSubtitleGenPage() {
+  const [file, setFile] = useState<File | null>(null)
+  const [subtitleResult, setSubtitleResult] = useState<SubtitleResponse | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [language, setLanguage] = useState("hi") // Hindi default
+  const [format, setFormat] = useState("srt")
+  const [charsPerCaption, setCharsPerCaption] = useState("")
+
+  async function handleGenerateSubtitles() {
+    if (!file) {
+      setSubtitleResult({
+        ok: false,
+        error: "Please select a video file first.",
+        status: 400,
+      })
+      return
+    }
+
+    setIsGenerating(true)
+    setSubtitleResult(null)
+
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("format", format)
+      formData.append("languageCode", language)
+      if (charsPerCaption) {
+        formData.append("charsPerCaption", charsPerCaption)
+      }
+
+      const response = await fetch("/api/generate-subtitles", {
+        method: "POST",
+        body: formData,
+      })
+
+      const data = (await response.json()) as SubtitleResponse
+      setSubtitleResult({
+        ...data,
+        status: response.status,
+      })
+    } catch (error) {
+      setSubtitleResult({
+        ok: false,
+        error: error instanceof Error ? error.message : "Failed to generate subtitles.",
+        status: 500,
+      })
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  function handleDownloadSubtitles() {
+    if (!subtitleResult?.subtitles) return
+
+    const blob = new Blob([subtitleResult.subtitles], { type: "text/plain" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `subtitles.${subtitleResult.format || "srt"}`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const selectedFile = event.target.files?.[0]
+    if (selectedFile) {
+      setFile(selectedFile)
+    }
+  }
+
   return (
     <section className="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
       <section className="space-y-4 rounded-3xl border border-border bg-card p-6 shadow-sm">
@@ -482,36 +565,179 @@ function VideoSubtitleGenPage() {
           </p>
         </header>
 
-        <Input type="file" className="cursor-pointer" />
+        <Input 
+          type="file" 
+          className="cursor-pointer" 
+          onChange={handleFileChange}
+          accept="video/*,.mp4,.mkv,.mov,.webm,.avi"
+        />
+        {file && (
+          <p className="text-sm text-muted-foreground">Selected: {file.name} ({Math.round(file.size / 1024 / 1024 * 100) / 100} MB)</p>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <label className="text-sm font-medium">Source language</label>
-            <Input defaultValue="English" />
+            <select 
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+            >
+              <option value="hi">Hindi (Default)</option>
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="ja">Japanese</option>
+              <option value="zh">Chinese</option>
+              <option value="ar">Arabic</option>
+            </select>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Subtitle style</label>
-            <Input defaultValue="Bold social captions" />
+            <label className="text-sm font-medium">Subtitle format</label>
+            <select 
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              value={format}
+              onChange={(e) => setFormat(e.target.value)}
+            >
+              <option value="srt">SRT</option>
+              <option value="vtt">VTT</option>
+            </select>
           </div>
         </div>
 
-        <Textarea
-          placeholder="Optional notes: highlight keywords, keep captions short, add punctuation..."
-          className="min-h-40 resize-y"
-        />
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Characters per caption (optional)</label>
+          <Input 
+            type="number" 
+            placeholder="32" 
+            value={charsPerCaption}
+            onChange={(e) => setCharsPerCaption(e.target.value)}
+            min="10"
+            max="100"
+          />
+          <p className="text-xs text-muted-foreground">Leave empty for AssemblyAI defaults</p>
+        </div>
 
-        <Button size="lg" className="w-full sm:w-auto">
+        <div className="rounded-2xl bg-muted/40 p-4 text-sm">
+          <p className="font-medium">API Key Required</p>
+          <p className="mt-1 text-muted-foreground">
+            Set ASSEMBLYAI_API_KEY environment variable to use subtitle generation. 
+            Get a free key at <a href="https://www.assemblyai.com/dashboard" target="_blank" className="underline">assemblyai.com</a>
+          </p>
+        </div>
+
+        <Button 
+          size="lg" 
+          className="w-full sm:w-auto"
+          onClick={handleGenerateSubtitles}
+          disabled={isGenerating || !file}
+        >
           <Captions className="mr-2 h-4 w-4" />
-          Generate Subtitles
+          {isGenerating ? "Generating..." : "Generate Subtitles"}
         </Button>
+
+        {subtitleResult && (
+          <div className="space-y-4 border-t border-border pt-6">
+            <p className="flex flex-col gap-2 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
+              <span>
+                <span className="font-medium">Status:</span> {subtitleResult.status}
+              </span>
+              <span>
+                <span className="font-medium">Success:</span>{" "}
+                {subtitleResult.ok ? "true" : "false"}
+              </span>
+              {subtitleResult.format && (
+                <span>
+                  <span className="font-medium">Format:</span> {subtitleResult.format.toUpperCase()}
+                </span>
+              )}
+              {subtitleResult.transcriptId && (
+                <span>
+                  <span className="font-medium">Transcript ID:</span> {subtitleResult.transcriptId}
+                </span>
+              )}
+              {typeof subtitleResult.durationMs === "number" && (
+                <span>
+                  <span className="font-medium">Duration:</span>{" "}
+                  {subtitleResult.durationMs}ms
+                </span>
+              )}
+            </p>
+
+            {subtitleResult.ok ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Generated Subtitles</h3>
+                  <div className="rounded-2xl bg-muted/70 p-4 text-sm leading-7 whitespace-pre-wrap overflow-auto max-h-60">
+                    {subtitleResult.subtitles || "No subtitles generated"}
+                  </div>
+                </div>
+
+                {subtitleResult.transcriptText && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium">Full Transcript</h3>
+                    <div className="rounded-2xl bg-muted/70 p-4 text-sm leading-7 whitespace-pre-wrap overflow-auto max-h-60">
+                      {subtitleResult.transcriptText}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <Button onClick={handleDownloadSubtitles} variant="outline">
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Subtitles
+                  </Button>
+                  <Button asChild variant="secondary">
+                    <a 
+                      href={`data:text/plain;charset=utf-8,${encodeURIComponent(subtitleResult.subtitles || '')}`}
+                      download={`subtitles.${subtitleResult.format || 'srt'}`}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Alternative Download
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl bg-destructive/10 p-4 text-sm text-destructive">
+                {subtitleResult.error || "Unknown error occurred"}
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="space-y-4 rounded-3xl border border-border bg-card p-6 shadow-sm">
         <h2 className="text-lg font-semibold">Preview</h2>
         <div className="flex min-h-72 items-end rounded-3xl bg-gradient-to-b from-muted to-card p-5">
           <div className="w-full rounded-2xl bg-black/85 p-4 text-center text-sm font-medium text-white shadow-lg">
-            Your generated subtitles will preview here.
+            {subtitleResult?.ok ? (
+              <div className="space-y-2 text-left">
+                <h3 className="mb-2 text-center font-bold">Generated Subtitles Preview</h3>
+                <pre className="text-xs whitespace-pre-wrap">
+                  {subtitleResult.subtitles?.split('\n').slice(0, 10).join('\n')}
+                  {subtitleResult.subtitles && subtitleResult.subtitles.split('\n').length > 10 && '\n...'}
+                </pre>
+                <p className="mt-3 text-center text-xs text-gray-300">
+                  Format: {subtitleResult.format?.toUpperCase() || 'SRT'} | 
+                  Lines: {subtitleResult.subtitles ? subtitleResult.subtitles.split('\n').length : 0}
+                </p>
+              </div>
+            ) : (
+              "Your generated subtitles will preview here."
+            )}
           </div>
+        </div>
+        
+        <div className="rounded-2xl bg-primary/10 border border-primary/30 p-4 text-sm">
+          <p className="font-medium text-primary">Hindi is set as the default language</p>
+          <p className="mt-1 text-primary/80">
+            The system will transcribe video speech in Hindi by default. Change the language dropdown if needed.
+          </p>
+          <p className="mt-2 text-xs">
+            <strong>Note:</strong> You need to set ASSEMBLYAI_API_KEY environment variable for this feature to work.
+          </p>
         </div>
       </section>
     </section>

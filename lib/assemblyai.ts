@@ -50,7 +50,7 @@ export class AssemblyAIClient {
     return response.json()
   }
 
-  async uploadFile(_filePath: string): Promise<UploadResponse> {
+  async uploadFile(): Promise<UploadResponse> {
     // In a real implementation, we would read and send the file
     // For web APIs, we'd need to handle file uploads differently
     throw new Error('File upload through this method not implemented. Use multipart form upload for API routes.')
