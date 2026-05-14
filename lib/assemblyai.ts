@@ -71,12 +71,6 @@ export class AssemblyAIClient {
       body: JSON.stringify(transcriptOptions)
     })
   }
-    
-    return this.request<TranscriptResponse>('transcript', {
-      method: 'POST',
-      body: JSON.stringify(transcriptOptions)
-    })
-  }
 
   async getTranscript(transcriptId: string): Promise<TranscriptResponse> {
     return this.request<TranscriptResponse>(`v2/transcript/${transcriptId}`)
