@@ -42,7 +42,7 @@ OUTPUT="subtitles.srt"
 FORMAT="srt"
 CHARS_PER_CAPTION=""
 LANGUAGE="hi"  # Hindi as default
-BASE_URL="https://api.assemblyai.com/v2"
+BASE_URL="https://api.assemblyai.com"
 
 # Check for API key
 if [ -z "$ASSEMBLYAI_API_KEY" ]; then
@@ -119,7 +119,7 @@ echo ""
 # Step 1: Upload the video file
 echo -e "${BLUE}[1/4] Uploading video file...${NC}"
 UPLOAD_RESPONSE=$(curl --silent --request POST \
-  --url "$BASE_URL/upload" \
+  --url "$BASE_URL/v2/upload" \
   --header "Authorization: $ASSEMBLYAI_API_KEY" \
   --header "Content-Type: application/octet-stream" \
   --data-binary @"$FILE")
@@ -139,7 +139,7 @@ echo "Upload URL: ${UPLOAD_URL:0:50}..."
 echo -e "${BLUE}[2/4] Creating transcription request...${NC}"
 TRANSCRIPT_JSON="{\"audio_url\": \"$UPLOAD_URL\"}"
 TRANSCRIPT_RESPONSE=$(curl --silent --request POST \
-  --url "$BASE_URL/transcript" \
+  --url "$BASE_URL/v2/transcript" \
   --header "Authorization: $ASSEMBLYAI_API_KEY" \
   --header "Content-Type: application/json" \
   --data "$TRANSCRIPT_JSON")
@@ -161,7 +161,7 @@ echo -e "${YELLOW}This may take a while depending on video length${NC}"
 
 while true; do
     STATUS_RESPONSE=$(curl --silent \
-      --url "$BASE_URL/transcript/$TRANSCRIPT_ID" \
+      --url "$BASE_URL/v2/transcript/$TRANSCRIPT_ID" \
       --header "Authorization: $ASSEMBLYAI_API_KEY")
     
     STATUS=$(echo "$STATUS_RESPONSE" | jq -r '.status')

@@ -27,7 +27,7 @@ export class AssemblyAIClient {
 
   constructor(config: AssemblyAIConfig) {
     this.apiKey = config.apiKey
-    this.baseUrl = config.baseUrl || 'https://api.assemblyai.com/v2'
+    this.baseUrl = config.baseUrl || 'https://api.assemblyai.com'
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -61,10 +61,16 @@ export class AssemblyAIClient {
     // Set Hindi as default language if not specified
     // Add default speech model if not specified
     const transcriptOptions = {
-      speech_model: 'universal-3-pro', // Default to universal-3-pro
+      speech_models: ['universal-3-pro'], // Default to universal-3-pro
       ...options,
       language_code: options.language_code || 'hi' // Hindi as default
     }
+    
+    return this.request<TranscriptResponse>('v2/transcript', {
+      method: 'POST',
+      body: JSON.stringify(transcriptOptions)
+    })
+  }
     
     return this.request<TranscriptResponse>('transcript', {
       method: 'POST',
@@ -73,7 +79,7 @@ export class AssemblyAIClient {
   }
 
   async getTranscript(transcriptId: string): Promise<TranscriptResponse> {
-    return this.request<TranscriptResponse>(`transcript/${transcriptId}`)
+    return this.request<TranscriptResponse>(`v2/transcript/${transcriptId}`)
   }
 
   async getSubtitles(transcriptId: string, format: 'srt' | 'vtt', charsPerCaption?: number): Promise<string> {
@@ -82,7 +88,7 @@ export class AssemblyAIClient {
       params.append('chars_per_caption', charsPerCaption.toString())
     }
 
-    const endpoint = `transcript/${transcriptId}/${format}${params.toString() ? `?${params.toString()}` : ''}`
+    const endpoint = `v2/transcript/${transcriptId}/${format}${params.toString() ? `?${params.toString()}` : ''}`
     
     const response = await fetch(`${this.baseUrl}/${endpoint}`, {
       headers: {
